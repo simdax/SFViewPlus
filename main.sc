@@ -12,7 +12,7 @@ SFViewPlus {
 	init{
 		var path=Platform.userHomeDir+/+dir;
 		var layout;
-		var rootPath, filePath, gridRes, gridResNUMBERBOX, gridResSLIDER, jesaispas, boutonPlay, offsetBox, amp;
+		var rootPath, filePath, gridRes, gridResNUMBERBOX, gridResSLIDER, jesaispas, boutonPlay, offsetBox, amp, boutonServeur, t, tSERVEUR;
 		var isPlaying;
 		var getWAV={
 			arg path;
@@ -39,8 +39,35 @@ SFViewPlus {
 			})
 		});
 
+		tSERVEUR=Task({
+			inf.do{
+				if(Server.local.serverRunning)
+				{boutonServeur.value_(0)}
+				{boutonServeur.value_(1)}
+			};
+			1.wait;
+		});
+		boutonServeur=Button()
+		.states_([
+			["serveur pas en marche"],
+			["serveur en marche", Color.green, Color.red]
+		])
+		.action_{
+			arg self;
+			switch(self.value,
+				1, {Server.local.boot},
+				0, {Server.local.quit}
+			)
+		};
+
 		offsetBox=NumberBox().value_(0);
-		amp=Knob().value_(0.5);
+
+		amp=Knob().value_(0.5)
+		.action_{ arg self;
+			playEvent !? {
+				playEvent.synth.set(\amp, self.value)
+			}
+		};
 
 		rootPath=Button()
 		.states_([
@@ -62,6 +89,7 @@ SFViewPlus {
 		};
 
 		filePath=PopUpMenu()
+		.allowsReselection_(true)
 		.items_(getWAV.(path))
 		.action_{ arg self;
 			var path=self.item;
@@ -76,27 +104,27 @@ SFViewPlus {
 		sf=SoundFileView()
 		.timeCursorOn_(true)
 		.gridOn_(true)
-		.action_{
-			var frame=sf.timeCursorPosition;
-		}
 		.keyDownAction_{
+
+			// fonction pour declencher le depart
+
 			arg self, char, mod, unicode;
 			var ev;
 			switch(unicode,
 				32,
 				{
 					self.soundfile !? {
-						switch(playEvent[\isPlaying],
-							nil, {
-								playEvent=self.soundfile.cue(
-									(firstFrame:self.timeCursorPosition), true);
-							},
+						switch(playEvent[\isPlaying].asBoolean,
 							false, {
 								playEvent=self.soundfile.cue(
-									(firstFrame:self.timeCursorPosition), true);
+									(firstFrame:self.timeCursorPosition, amp:amp.value), true);
+								t.play;
+								boutonPlay.value_(1);
 							},
 							true, {
-								playEvent.stop
+								playEvent.stop;
+								t.stop;
+								boutonPlay.value_(0);
 							}
 						)
 					}
@@ -104,6 +132,9 @@ SFViewPlus {
 			);
 		}
 		.mouseUpAction_{
+
+			// modification quand on deplace le curseur
+
 			arg self, xpos, ypos, modif;
 
 			var frame=sf.timeCursorPosition;
@@ -119,11 +150,14 @@ SFViewPlus {
 				firstFrame=(sf.numFrames-sf.viewFrames)*sf.scrollPos,
 				pos =ControlSpec(firstFrame, firstFrame+sf.viewFrames);
 
+				//TODO: il faudrait prendre en compte le offset
 				frame=frame.quantize(total / nbFen, total / nbFen, 1);  // stick to grid
+
+				// stick to slider
 				sf.timeCursorPosition=frame;
 				jesaispas.valueAction_(
 					pos.unmap(sf.timeCursorPosition)
-				); // stick to slider
+				);
 
 				// info boxes
 				offsetBox.value=frame;
@@ -135,7 +169,7 @@ SFViewPlus {
 							//stop and play
 							playEvent.stop;
 							playEvent=self.soundfile.cue(
-								(firstFrame:self.timeCursorPosition), true);
+								(firstFrame:self.timeCursorPosition, amp:amp.value), true);
 						}
 					)
 				}
@@ -153,12 +187,10 @@ SFViewPlus {
 		.action_{
 			arg self;
 			var firstFrame=(sf.numFrames-sf.viewFrames)*sf.scrollPos;
-			var pos =ControlSpec(firstFrame, firstFrame+sf.viewFrames).map(self.value);
+			var pos =ControlSpec(firstFrame, firstFrame+sf.viewFrames);
 			var resolution=ControlSpec(0.3, 10, 'exp').map(self.value);
 
 			//on change
-			// le tempo
-			TempoClock.tempo=resolution.reciprocal;
 			// la resolution
 			sf.soundfile !? {
 				sf.gridResolution_(resolution);
@@ -179,16 +211,19 @@ SFViewPlus {
 			var firstFrame=(sf.numFrames-sf.viewFrames)*sf.scrollPos;
 			var pos =ControlSpec(firstFrame, firstFrame+sf.viewFrames);
 
-			if(playEvent[\isPlaying].asBoolean) {
+			if(playEvent[\isPlaying].asBoolean.not) {
 			var frame=pos.map(self.value);
 
+				// on actualise le time curseur
 			sf.timeCursorPosition_(frame);
 			offsetBox.value_(frame);
 
-			baseFrame=sf.timeCursorPosition/Server.local.sampleRate;
+				// on déplace par rapport au time curseur
+				// TODO remplacer 44100 par le vrai server.local.samplerate
+			baseFrame=sf.timeCursorPosition/44100;
 			resolution=sf.gridResolution;
-
 			offset=baseFrame-resolution;
+
 			sf.gridOffset_(offset);
 			}
 		}
@@ -208,7 +243,7 @@ SFViewPlus {
 					sf,
 					VLayout(gridResNUMBERBOX, gridResSLIDER)
 				),
-				HLayout(jesaispas, boutonPlay, offsetBox, amp)
+				HLayout(jesaispas, boutonPlay, boutonServeur, offsetBox, amp)
 			)
 		));
 		fenetre.layout_(layout);
