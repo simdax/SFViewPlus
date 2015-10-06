@@ -185,7 +185,7 @@ SFViewPlus {
 			sf.timeCursorPosition_(frame);
 			offsetBox.value_(frame);
 
-			baseFrame=sf.timeCursorPosition/s.sampleRate;
+			baseFrame=sf.timeCursorPosition/Server.local.sampleRate;
 			resolution=sf.gridResolution;
 
 			offset=baseFrame-resolution;
