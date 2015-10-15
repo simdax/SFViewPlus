@@ -12,7 +12,7 @@ SFViewPlus {
 	init{
 		var path=Platform.userHomeDir+/+dir;
 		var layout;
-		var rootPath, filePath, gridRes, gridResNUMBERBOX, gridResSLIDER, jesaispas, boutonPlay, offsetBox, amp, boutonServeur, t, tSERVEUR;
+		var rootPath, filePath, gridRes, gridResNUMBERBOX, gridResSLIDER, positionSLIDER, boutonPlay, offsetBox, amp, boutonServeur, t, tSERVEUR;
 		var isPlaying;
 		var getWAV={
 			arg path;
@@ -155,7 +155,7 @@ SFViewPlus {
 
 				// stick to slider
 				sf.timeCursorPosition=frame;
-				jesaispas.valueAction_(
+				positionSLIDER.valueAction_(
 					pos.unmap(sf.timeCursorPosition)
 				);
 
@@ -194,7 +194,7 @@ SFViewPlus {
 			// la resolution
 			sf.soundfile !? {
 				sf.gridResolution_(resolution);
-				jesaispas.valueAction_(pos.unmap(sf.timeCursorPosition))
+				positionSLIDER.valueAction_(pos.unmap(sf.timeCursorPosition))
 			};
 			// on actualise la numberBox
 			gridResNUMBERBOX.value=resolution;
@@ -202,7 +202,7 @@ SFViewPlus {
 		.maxWidth_(20)
 		;
 
-		jesaispas=Slider()
+		positionSLIDER=Slider()
 		.value_(0)
 		.orientation_(\horizontal)
 		.action_{
@@ -243,7 +243,7 @@ SFViewPlus {
 					sf,
 					VLayout(gridResNUMBERBOX, gridResSLIDER)
 				),
-				HLayout(jesaispas, boutonPlay, boutonServeur, offsetBox, amp)
+				HLayout(positionSLIDER, boutonPlay, boutonServeur, offsetBox, amp)
 			)
 		));
 		fenetre.layout_(layout);
